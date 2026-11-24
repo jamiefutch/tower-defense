@@ -119,8 +119,6 @@ function hideOverlay(): void {
 
 function newGame(mapId: string, intro: boolean): void {
   game = new Game(getMap(mapId));
-  canvas.width = game.grid.width * CELL_PX;
-  canvas.height = game.grid.height * CELL_PX;
   view = { hover: null, ghost: null, selected: null, showRoute: view.showRoute };
   endShown = false;
   seenMessages = 0;

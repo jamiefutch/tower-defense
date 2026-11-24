@@ -1,12 +1,13 @@
 :root {
-  --bg: #1b1f24;
-  --panel: #232932;
-  --panel-2: #2c3440;
-  --text: #e6edf3;
-  --muted: #8b949e;
-  --accent: #3fb950;
-  --danger: #f85149;
-  color-scheme: dark;
+  --bg: #d9dee6;
+  --panel: #f5f7fa;
+  --panel-2: #e4e9f0;
+  --text: #1f2937;
+  --muted: #5b6472;
+  --accent: #15803d;
+  --danger: #b42318;
+  --line: #b9c1cd;
+  color-scheme: light;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
@@ -38,7 +39,7 @@ body {
 
 canvas {
   display: block;
-  background: #2d3b2a;
+  background: #e9ecf1;
   border-radius: 6px;
   cursor: crosshair;
 }
@@ -49,7 +50,7 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(13, 17, 23, 0.7);
+  background: rgba(233, 236, 241, 0.75);
   border-radius: 6px;
 }
 
@@ -59,7 +60,7 @@ canvas {
 
 .card {
   background: var(--panel);
-  border: 1px solid #3d4654;
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 24px;
   width: min(420px, 90%);
@@ -130,7 +131,7 @@ button {
   font: inherit;
   color: var(--text);
   background: var(--panel-2);
-  border: 1px solid #3d4654;
+  border: 1px solid var(--line);
   border-radius: 6px;
   padding: 6px 10px;
   cursor: pointer;
@@ -138,7 +139,7 @@ button {
 
 button:hover:not(:disabled),
 select:hover {
-  border-color: #58a6ff;
+  border-color: #2563eb;
 }
 
 button:disabled {
@@ -147,7 +148,7 @@ button:disabled {
 }
 
 button.primary {
-  background: #1f6f3a;
+  background: #bbf7d0;
   border-color: var(--accent);
   width: 100%;
   margin-top: 8px;
@@ -155,15 +156,15 @@ button.primary {
 }
 
 button.danger {
-  background: #5a2424;
+  background: #fecaca;
   border-color: var(--danger);
 }
 
 button.speed.active,
 button.mode-btn.active,
 button.tower-btn.active {
-  border-color: #58a6ff;
-  background: #1c3550;
+  border-color: #2563eb;
+  background: #dbeafe;
 }
 
 .palette {
@@ -198,6 +199,7 @@ button.tower-btn.active {
   height: 12px;
   border-radius: 50%;
   flex: 0 0 auto;
+  border: 1px solid rgba(17, 24, 39, 0.45);
 }
 
 #tower-panel {
@@ -214,14 +216,14 @@ button.tower-btn.active {
   padding: 0;
   margin: 0;
   font-size: 12px;
-  color: #c9d1d9;
+  color: #374151;
   max-height: 140px;
   overflow-y: auto;
 }
 
 #log li {
   padding: 2px 0;
-  border-bottom: 1px solid #2d3440;
+  border-bottom: 1px solid var(--line);
 }
 
 .help {
