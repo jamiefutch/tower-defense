@@ -1,19 +1,26 @@
 import { Sound, type Sfx } from "./audio/audio";
 import { CELL_PX, FIXED_DT, TOTAL_WAVES } from "./core/config";
 import { Game } from "./core/game";
-import { saveBestWave } from "./core/storage";
+import { loadThemeId, saveBestWave, saveThemeId } from "./core/storage";
 import { MAPS, getMap } from "./data/maps";
 import { TOWER_ORDER, getTowerType, type TargetMode } from "./data/towers";
 import type { SoundEvent } from "./entities/sound-events";
 import type { Tower } from "./entities/tower";
 import type { Cell } from "./grid/grid";
 import { footprintOrigin, render, type ViewState } from "./render/renderer";
+import { getTheme, THEMES, themeCssVars, type Theme } from "./render/themes";
 import { buildPalette, el, HELP_TEXT, renderLog, renderStats, renderTowerPanel, type TowerPanelActions } from "./ui/hud";
 
 /** Upper bound on fixed steps per frame, so a slow tab cannot freeze the page. */
 const MAX_STEPS_PER_FRAME = 240;
 /** How often the sidebar text refreshes, in seconds. */
 const HUD_INTERVAL = 0.1;
+/** Page chrome around the board: #app padding on each side, and the gap before the sidebar. */
+const PAGE_PAD = 16;
+const PAGE_GAP = 16;
+/** Limits on the board scale. Below the minimum the page scrolls rather than shrinking further. */
+const MIN_SCALE = 0.5;
+const MAX_SCALE = 2;
 
 function must<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
@@ -35,6 +42,8 @@ const nextBtn = must<HTMLButtonElement>("next-wave");
 const panel = must<HTMLElement>("tower-panel");
 const logList = must<HTMLElement>("log");
 const mapSelect = must<HTMLSelectElement>("map-select");
+const themeSelect = must<HTMLSelectElement>("theme-select");
+const sidebar = must<HTMLElement>("sidebar");
 const speedBtns = Array.from(document.querySelectorAll<HTMLButtonElement>(".speed"));
 const statEls = {
   gold: must<HTMLElement>("gold"),
@@ -48,9 +57,12 @@ const statEls = {
 const palette = buildPalette(must("palette"), (id) => togglePick(id));
 must<HTMLElement>("help").textContent = HELP_TEXT;
 for (const m of MAPS) mapSelect.append(new Option(m.name, m.id));
+for (const t of THEMES) themeSelect.append(new Option(t.name, t.id));
+themeSelect.addEventListener("change", () => applyTheme(getTheme(themeSelect.value)));
 
 let game = new Game(MAPS[0]);
-let view: ViewState = { hover: null, ghost: null, selected: null, showRoute: false };
+let view: ViewState = { hover: null, ghost: null, selected: null, showRoute: false, scale: 1, theme: getTheme(null) };
+let panelKey = "";
 let endShown = false;
 let seenMessages = 0;
 
@@ -102,7 +114,32 @@ function playNewSoundEvents(): void {
 }
 
 function cellFromEvent(e: MouseEvent): Cell {
-  return { x: Math.floor(e.offsetX / CELL_PX), y: Math.floor(e.offsetY / CELL_PX) };
+  const cell = CELL_PX * view.scale;
+  return { x: Math.floor(e.offsetX / cell), y: Math.floor(e.offsetY / cell) };
+}
+
+/** Largest board scale that fits the current window beside the sidebar, clamped to the allowed range. */
+function fitScale(): number {
+  const boardW = game.grid.width * CELL_PX;
+  const boardH = game.grid.height * CELL_PX;
+  const availW = window.innerWidth - sidebar.offsetWidth - 2 * PAGE_PAD - PAGE_GAP;
+  const availH = window.innerHeight - 2 * PAGE_PAD;
+  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, Math.min(availW / boardW, availH / boardH)));
+}
+
+/** Re-fits the board to the window. The sidebar is set to the board's height so the two columns line up. */
+function updateLayout(): void {
+  view.scale = fitScale();
+  const boardH = game.grid.height * CELL_PX * view.scale;
+  document.documentElement.style.setProperty("--board-height", `${boardH}px`);
+}
+
+/** Applies a colour theme to the page chrome, remembers it, and gives the renderer the new palette. */
+function applyTheme(t: Theme): void {
+  for (const [name, value] of themeCssVars(t)) document.documentElement.style.setProperty(name, value);
+  view.theme = t;
+  themeSelect.value = t.id;
+  saveThemeId(t.id);
 }
 
 function showOverlay(title: string, paragraphs: string[], label: string, onClick: () => void): void {
@@ -119,7 +156,8 @@ function hideOverlay(): void {
 
 function newGame(mapId: string, intro: boolean): void {
   game = new Game(getMap(mapId));
-  view = { hover: null, ghost: null, selected: null, showRoute: view.showRoute };
+  view = { ...view, hover: null, ghost: null, selected: null };
+  updateLayout();
   endShown = false;
   seenMessages = 0;
   mapSelect.value = mapId;
@@ -293,6 +331,15 @@ for (const btn of speedBtns) {
 function refreshHud(): void {
   renderStats(statEls, game);
   renderLog(logList, game.messages);
+  // The upgrade button only changes when the tower levels up or the player can afford the upgrade.
+  // Rebuilding the panel on those changes alone keeps a click from being lost to a re-render mid-press.
+  const t = view.selected;
+  const cost = t ? game.upgradeCost(t) : null;
+  const key = t ? `${t.id}:${t.level}:${cost === null || game.gold >= cost}` : "";
+  if (key !== panelKey) {
+    panelKey = key;
+    refreshPanel();
+  }
 }
 
 // Fixed-timestep loop: the simulation always advances in FIXED_DT steps, scaled by game speed.
@@ -331,6 +378,8 @@ function frame(now: number): void {
   requestAnimationFrame(frame);
 }
 
+applyTheme(getTheme(loadThemeId()));
+window.addEventListener("resize", updateLayout);
 newGame(MAPS[0].id, true);
 refreshHud();
 requestAnimationFrame(frame);

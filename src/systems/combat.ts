@@ -1,7 +1,7 @@
 import type { Creep } from "../entities/creep";
 import { lineFx, ringFx, type Effect } from "../entities/effects";
 import type { SoundEvent } from "../entities/sound-events";
-import { towerCenter, towerLevel, type Tower } from "../entities/tower";
+import { BARREL_REACH, towerCenter, towerLevel, type Tower } from "../entities/tower";
 import { canTargetCreep, pickTarget } from "./targeting";
 
 interface Point {
@@ -30,7 +30,10 @@ function fire(
 ): void {
   const lvl = towerLevel(t);
   t.shots += 1;
-  effects.push(lineFx(center.x, center.y, target.x, target.y, t.type.color));
+  // Shots leave the barrel tip, so the tracer visibly comes out of the weapon.
+  const muzzleX = center.x + Math.cos(t.aim) * BARREL_REACH;
+  const muzzleY = center.y + Math.sin(t.aim) * BARREL_REACH;
+  effects.push(lineFx(muzzleX, muzzleY, target.x, target.y, t.type.color));
   const splash = Boolean(lvl.splash && lvl.damage > 0);
   sounds.push({ kind: "shot", id: t.type.id, splash });
 
@@ -73,9 +76,12 @@ export function stepTowers(
   const killed: Creep[] = [];
   for (const t of towers) {
     const interval = 1 / towerLevel(t).rate;
+    const center = towerCenter(t);
     t.cooldown -= dt;
+    // The weapon tracks its target every step, including while it is reloading.
+    const tracked = pickTarget(t, creeps, center);
+    if (tracked) t.aim = Math.atan2(tracked.y - center.y, tracked.x - center.x);
     while (t.cooldown <= 0) {
-      const center = towerCenter(t);
       const target = pickTarget(t, creeps, center);
       if (!target) {
         t.cooldown = 0;

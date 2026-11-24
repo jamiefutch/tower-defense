@@ -13,6 +13,8 @@ A browser tower defense game inspired by *Desktop Tower Defense*. Build towers o
 - **Economy:** kills pay gold. Clearing a wave pays a bonus plus interest on the gold you're holding. Calling a wave early pays half the seconds left on the countdown.
 - **Towers:** seven types (Pellet, Squirt, Dart, Snap, Swarm, Frost, Bash). Each upgrades three times. Selling refunds 70% of everything you've spent on it.
 - **Targeting:** each tower can prefer the nearest, strongest, weakest, or furthest-along creep.
+- **Aiming:** each tower's weapon turns to face its current target, and shots leave from the barrel tip. While a tower is reloading it keeps tracking.
+- **Upgrades:** the Upgrade button is greyed out until you have enough gold for the next level.
 
 The full tower, creep, and wave tables are in [`planning/design.md`](planning/design.md).
 
@@ -28,9 +30,12 @@ The full tower, creep, and wave tables are in [`planning/design.md`](planning/de
 | `R` | Show or hide the route |
 | `Esc` or right-click | Cancel the current selection |
 | Speed buttons | Run the game at 1x, 2x, or 3x |
+| Theme menu | Choose a colour theme. The default is Green, modelled on Desktop Tower Defense. Your choice is remembered in the browser |
 | Sound button | Mute or unmute sound effects. Each tower type has its own shot sound. Creeps make a sound when they spawn, when they are hit or killed, and when they escape |
 
-Your best wave is saved in the browser's local storage.
+The board scales to fit the window, so it stays fully on screen at any size.
+
+Your best wave and theme are saved in the browser's local storage.
 
 ## Quick start
 
@@ -55,7 +60,7 @@ src/
   core/
     config.ts        tunable constants: gold, lives, wave timing, HP growth
     game.ts          the game: placement rules, waves, economy, win/lose
-    storage.ts       best-wave score in localStorage
+    storage.ts       best-wave score and theme choice in localStorage
   grid/
     grid.ts          playfield with blocked cells
     pathfinding.ts   BFS shortest path and multi-waypoint routes
@@ -77,6 +82,7 @@ src/
     maps.ts          map layouts: spawn, checkpoints, exit
   render/
     renderer.ts      canvas drawing
+    themes.ts        colour themes (Green, Light, Dark, Sand) for the page and the field
   ui/
     hud.ts           sidebar: palette, stats, tower panel, log
   audio/

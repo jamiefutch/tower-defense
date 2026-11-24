@@ -17,7 +17,7 @@ const path = [
 ];
 
 function tower(typeId: string): Tower {
-  return { id: 99, type: TOWER_TYPES[typeId], x: 0, y: 0, level: 0, invested: 0, cooldown: 0, shots: 0, mode: "nearest" };
+  return { id: 99, type: TOWER_TYPES[typeId], x: 0, y: 0, level: 0, invested: 0, cooldown: 0, shots: 0, mode: "nearest", aim: 0 };
 }
 
 function creepAt(x: number, y: number, typeId = "normal"): Creep {

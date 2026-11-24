@@ -3,8 +3,9 @@ import type { Game } from "../core/game";
 import type { TowerType } from "../data/towers";
 import type { Creep } from "../entities/creep";
 import type { Effect } from "../entities/effects";
-import { towerCenter, towerLevel, type Tower } from "../entities/tower";
+import { BARREL_REACH, towerCenter, towerLevel, type Tower } from "../entities/tower";
 import type { Cell } from "../grid/grid";
+import { getTheme, type Theme } from "./themes";
 
 /** Per-frame UI state the renderer needs: what the cursor is doing and what is selected. */
 export interface ViewState {
@@ -13,21 +14,16 @@ export interface ViewState {
   ghost: TowerType | null;
   selected: Tower | null;
   showRoute: boolean;
+  /** Playfield pixels per cell, relative to CELL_PX. Fits the board to the window. */
+  scale: number;
+  theme: Theme;
 }
 
-// Light, flat palette in the spirit of Desktop Tower Defense. Tower and creep colours come from data.
-const FIELD = "#e9ecf1";
-const FIELD_LINE = "rgba(60,70,90,0.16)";
-const FIELD_EDGE = "#9aa3b2";
+// Ink for outlines and glyphs. It stays dark in every theme because it sits on coloured towers and creeps.
 const INK = "#111827";
-const ROUTE = "rgba(17,24,39,0.28)";
-const SPAWN = { fill: "rgba(63,185,80,0.45)", stroke: "#1a7f37" };
-const EXIT = { fill: "rgba(248,81,73,0.45)", stroke: "#b42318" };
-const CHECKPOINT = { fill: "rgba(56,139,253,0.3)", stroke: "#1d4ed8" };
-const OK_STROKE = "rgba(21,128,61,0.8)";
-const OK_FILL = "rgba(74,222,128,0.12)";
-const BAD_STROKE = "rgba(185,28,28,0.8)";
-const BAD_FILL = "rgba(248,81,73,0.12)";
+
+/** Set from the view at the start of each render. Drawing helpers read colours from here. */
+let theme: Theme = getTheme(null);
 
 const px = (cells: number): number => cells * CELL_PX;
 
@@ -54,23 +50,25 @@ export function shade(color: string, amount: number): string {
 }
 
 export function render(ctx: CanvasRenderingContext2D, game: Game, view: ViewState): void {
-  // The backing store is sized for the device pixel ratio so lines and glyphs stay sharp on Retina screens.
-  // Drawing code works in CSS pixels, which match the canvas's displayed size.
+  theme = view.theme;
+  // Drawing code works in unscaled CSS-pixel units (`px`). The backing store is sized for the
+  // device pixel ratio and the fit scale together, so lines and glyphs stay sharp at any board size.
   const cssW = px(game.grid.width);
   const cssH = px(game.grid.height);
   const dpr = window.devicePixelRatio || 1;
+  const res = dpr * view.scale;
   const canvas = ctx.canvas;
-  const bw = Math.round(cssW * dpr);
-  const bh = Math.round(cssH * dpr);
+  const bw = Math.round(cssW * res);
+  const bh = Math.round(cssH * res);
   if (canvas.width !== bw || canvas.height !== bh) {
     canvas.width = bw;
     canvas.height = bh;
-    canvas.style.width = `${cssW}px`;
-    canvas.style.height = `${cssH}px`;
   }
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  canvas.style.width = `${cssW * view.scale}px`;
+  canvas.style.height = `${cssH * view.scale}px`;
+  ctx.setTransform(res, 0, 0, res, 0, 0);
   ctx.clearRect(0, 0, cssW, cssH);
-  ctx.drawImage(groundLayer(game.grid.width, game.grid.height, dpr), 0, 0, cssW, cssH);
+  ctx.drawImage(groundLayer(game.grid.width, game.grid.height, res), 0, 0, cssW, cssH);
 
   if (view.showRoute) drawRoute(ctx, game.route);
   drawMarkers(ctx, game);
@@ -78,7 +76,7 @@ export function render(ctx: CanvasRenderingContext2D, game: Game, view: ViewStat
   for (const t of game.towers) drawTower(ctx, t, t === view.selected);
   if (view.selected) {
     const c = towerCenter(view.selected);
-    drawRange(ctx, c.x, c.y, towerLevel(view.selected).range, "rgba(17,24,39,0.6)", "rgba(17,24,39,0.06)");
+    drawRange(ctx, c.x, c.y, towerLevel(view.selected).range, theme.field.rangeStroke, theme.field.rangeFill);
   }
   if (view.hover && view.ghost) drawGhost(ctx, game, view.hover, view.ghost);
 
@@ -89,28 +87,30 @@ export function render(ctx: CanvasRenderingContext2D, game: Game, view: ViewStat
 }
 
 /**
- * The field never changes during a game, so it is drawn once per size and DPR and reused each frame.
- * One layer is kept per key so switching between maps of different sizes doesn't redraw the field.
+ * The field never changes during a game, so it is drawn once per size, resolution and theme, and reused each frame.
+ * One layer is kept per key so switching between maps, scales or themes doesn't leave stale fields behind.
  */
 const groundLayers = new Map<string, HTMLCanvasElement>();
 
-function groundLayer(width: number, height: number, dpr: number): HTMLCanvasElement {
-  const key = `${width}x${height}@${dpr}`;
+/** `res` is the backing-store pixels per CSS pixel, including the fit scale. */
+function groundLayer(width: number, height: number, res: number): HTMLCanvasElement {
+  const key = `${theme.id}:${width}x${height}@${res}`;
   const cached = groundLayers.get(key);
   if (cached) return cached;
 
   const layer = document.createElement("canvas");
-  layer.width = Math.round(px(width) * dpr);
-  layer.height = Math.round(px(height) * dpr);
+  layer.width = Math.round(px(width) * res);
+  layer.height = Math.round(px(height) * res);
   const g = layer.getContext("2d");
   if (g) {
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.fillStyle = FIELD;
+    const f = theme.field;
+    g.setTransform(res, 0, 0, res, 0, 0);
+    g.fillStyle = f.fill;
     g.fillRect(0, 0, px(width), px(height));
-    g.fillStyle = FIELD_LINE;
+    g.fillStyle = f.gridLine;
     for (let x = 1; x < width; x++) g.fillRect(px(x), 0, 1, px(height));
     for (let y = 1; y < height; y++) g.fillRect(0, px(y), px(width), 1);
-    g.fillStyle = FIELD_EDGE;
+    g.fillStyle = f.edge;
     g.fillRect(0, 0, px(width), 2);
     g.fillRect(0, px(height) - 2, px(width), 2);
     g.fillRect(0, 0, 2, px(height));
@@ -121,7 +121,7 @@ function groundLayer(width: number, height: number, dpr: number): HTMLCanvasElem
 }
 
 function drawRoute(ctx: CanvasRenderingContext2D, route: readonly Cell[]): void {
-  ctx.strokeStyle = ROUTE;
+  ctx.strokeStyle = theme.field.route;
   ctx.lineWidth = 3;
   ctx.setLineDash([6, 6]);
   ctx.beginPath();
@@ -152,13 +152,35 @@ function drawMarkers(ctx: CanvasRenderingContext2D, game: Game): void {
   ctx.font = "bold 14px system-ui, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  game.map.checkpoints.forEach((cell, i) => drawZone(ctx, cell, CHECKPOINT, String(i + 1)));
-  drawZone(ctx, game.map.spawn, SPAWN, "S");
-  drawZone(ctx, game.map.exit, EXIT, "E");
+  const f = theme.field;
+  const checkpoint = { fill: f.checkpointFill, stroke: f.checkpointStroke };
+  game.map.checkpoints.forEach((cell, i) => drawZone(ctx, cell, checkpoint, String(i + 1)));
+  drawZone(ctx, game.map.spawn, { fill: f.spawnFill, stroke: f.spawnStroke }, "S");
+  drawZone(ctx, game.map.exit, { fill: f.exitFill, stroke: f.exitStroke }, "E");
 }
 
 function drawTower(ctx: CanvasRenderingContext2D, t: Tower, selected: boolean): void {
   drawTowerBody(ctx, t.type, t.x, t.y, t.level, selected);
+  drawBarrel(ctx, t);
+}
+
+/**
+ * A weapon barrel from the tower centre toward its aim. It starts past the glyph and ends at the
+ * same point that shots leave from (BARREL_REACH), so the tracer visibly comes out of the barrel.
+ */
+function drawBarrel(ctx: CanvasRenderingContext2D, t: Tower): void {
+  const c = towerCenter(t);
+  const cos = Math.cos(t.aim);
+  const sin = Math.sin(t.aim);
+  const from = BARREL_REACH * 0.35;
+  ctx.strokeStyle = shade(t.type.color, -0.6);
+  ctx.lineWidth = 5;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(px(c.x + cos * from), px(c.y + sin * from));
+  ctx.lineTo(px(c.x + cos * BARREL_REACH), px(c.y + sin * BARREL_REACH));
+  ctx.stroke();
+  ctx.lineCap = "butt";
 }
 
 /** Draws a tower whose footprint starts at cell (ox, oy). Shared by placed towers and the placement ghost. */
@@ -307,15 +329,15 @@ function drawGhost(ctx: CanvasRenderingContext2D, game: Game, hover: Cell, type:
   ctx.globalAlpha = 0.6;
   drawTowerBody(ctx, type, ox, oy, 0, false);
   ctx.globalAlpha = 1;
-  ctx.fillStyle = ok ? "rgba(74,222,128,0.22)" : "rgba(248,81,73,0.32)";
+  ctx.fillStyle = ok ? theme.field.okFill : theme.field.badFill;
   ctx.fillRect(px(ox), px(oy), size, size);
   drawRange(
     ctx,
     ox + FOOTPRINT / 2,
     oy + FOOTPRINT / 2,
     type.levels[0].range,
-    ok ? OK_STROKE : BAD_STROKE,
-    ok ? OK_FILL : BAD_FILL,
+    ok ? theme.field.okStroke : theme.field.badStroke,
+    ok ? theme.field.okFill : theme.field.badFill,
   );
 }
 
@@ -375,7 +397,7 @@ function drawCreep(ctx: CanvasRenderingContext2D, c: Creep): void {
   // Flyers cast a shadow on the ground beneath them.
   if (c.type.air) {
     tracePath(ctx, "triangle", x + 4, y + 6, r);
-    ctx.fillStyle = "rgba(15,23,42,0.22)";
+    ctx.fillStyle = theme.field.shadow;
     ctx.fill();
   }
 

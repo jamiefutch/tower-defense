@@ -20,3 +20,22 @@ export function saveBestWave(wave: number): number {
   }
   return best;
 }
+
+const THEME_KEY = "tower-defense.theme";
+
+/** The saved colour theme id, or null if none is stored. Callers validate it against the theme table. */
+export function loadThemeId(): string | null {
+  try {
+    return window.localStorage.getItem(THEME_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function saveThemeId(id: string): void {
+  try {
+    window.localStorage.setItem(THEME_KEY, id);
+  } catch {
+    // Storage can be disabled. The theme just won't be remembered.
+  }
+}

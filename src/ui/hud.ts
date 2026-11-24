@@ -103,6 +103,7 @@ export function renderTowerPanel(panel: HTMLElement, game: Game, t: Tower | null
   const lvl = towerLevel(t);
   const upgradeCost = game.upgradeCost(t);
   const refund = sellRefund(t.invested);
+  const short = upgradeCost !== null && game.gold < upgradeCost ? upgradeCost - game.gold : 0;
 
   const stats = [`Damage ${lvl.damage}`, `Range ${lvl.range}`, `${lvl.rate}/s`];
   if (lvl.splash) stats.push(`Splash ${lvl.splash}`);
@@ -128,7 +129,8 @@ export function renderTowerPanel(panel: HTMLElement, game: Game, t: Tower | null
         {
           cls: "primary",
           text: upgradeCost === null ? "Max level" : `Upgrade (${upgradeCost}g)`,
-          disabled: upgradeCost === null,
+          title: short > 0 ? `Need ${short}g more` : undefined,
+          disabled: upgradeCost === null || short > 0,
           onClick: () => actions.upgrade(t),
         },
         [],

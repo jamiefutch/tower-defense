@@ -1,12 +1,19 @@
 :root {
-  --bg: #d9dee6;
-  --panel: #f5f7fa;
-  --panel-2: #e4e9f0;
-  --text: #1f2937;
-  --muted: #5b6472;
-  --accent: #15803d;
+  /* Defaults match the green theme. main.ts overwrites these from src/render/themes.ts on start-up. */
+  --bg: #2d4f22;
+  --panel: #eef5e6;
+  --panel2: #d8e8c8;
+  --text: #17301a;
+  --muted: #4d6a45;
+  --accent: #2e7d32;
+  --line: #9ab586;
+  --canvas: #6fa84a;
+  --overlay: rgba(111, 168, 74, 0.78);
+  --primary: #bfe6a4;
   --danger: #b42318;
-  --line: #b9c1cd;
+  --danger-bg: #fecaca;
+  --highlight: #2563eb;
+  --highlight-bg: #dbeafe;
   color-scheme: light;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -39,7 +46,7 @@ body {
 
 canvas {
   display: block;
-  background: #e9ecf1;
+  background: var(--canvas);
   border-radius: 6px;
   cursor: crosshair;
 }
@@ -50,7 +57,7 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(233, 236, 241, 0.75);
+  background: var(--overlay);
   border-radius: 6px;
 }
 
@@ -78,7 +85,8 @@ canvas {
   background: var(--panel);
   border-radius: 8px;
   padding: 14px;
-  height: 640px;
+  /* Set from the board's height in main.ts so the sidebar lines up with the playfield. */
+  height: var(--board-height, 640px);
   overflow-y: auto;
 }
 
@@ -130,7 +138,7 @@ select,
 button {
   font: inherit;
   color: var(--text);
-  background: var(--panel-2);
+  background: var(--panel2);
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 6px 10px;
@@ -139,7 +147,7 @@ button {
 
 button:hover:not(:disabled),
 select:hover {
-  border-color: #2563eb;
+  border-color: var(--highlight);
 }
 
 button:disabled {
@@ -148,7 +156,7 @@ button:disabled {
 }
 
 button.primary {
-  background: #bbf7d0;
+  background: var(--primary);
   border-color: var(--accent);
   width: 100%;
   margin-top: 8px;
@@ -156,15 +164,15 @@ button.primary {
 }
 
 button.danger {
-  background: #fecaca;
+  background: var(--danger-bg);
   border-color: var(--danger);
 }
 
 button.speed.active,
 button.mode-btn.active,
 button.tower-btn.active {
-  border-color: #2563eb;
-  background: #dbeafe;
+  border-color: var(--highlight);
+  background: var(--highlight-bg);
 }
 
 .palette {
