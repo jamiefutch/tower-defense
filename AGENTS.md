@@ -73,7 +73,8 @@ This is the required directory structure. New files must go in the directory tha
 │   │   ├── waves.ts          wave composition, generated per wave number
 │   │   └── maps.ts           MAPS: spawn, checkpoints, exit
 │   ├── render/
-│   │   └── renderer.ts       canvas drawing only
+│   │   ├── renderer.ts       canvas drawing only
+│   │   └── themes.ts         colour themes for the page and playfield (DOM-free data)
 │   ├── ui/
 │   │   └── hud.ts            sidebar DOM: palette, stats, tower panel, log
 │   └── audio/
