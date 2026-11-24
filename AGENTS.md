@@ -60,7 +60,8 @@ This is the required directory structure. New files must go in the directory tha
 │   ├── entities/             headless state for things on the field
 │   │   ├── creep.ts          creep state, movement, slow and stun, repathing
 │   │   ├── tower.ts          tower state and footprint helpers
-│   │   └── effects.ts        short-lived visual effects (shots, splashes, leaks)
+│   │   ├── effects.ts        short-lived visual effects (shots, splashes, leaks)
+│   │   └── sound-events.ts   audio cues recorded by game logic (shot, hit, kill, spawn, leak)
 │   ├── systems/              headless pure logic that acts on entities
 │   │   ├── spawner.ts        turns a wave into timed spawn events
 │   │   ├── targeting.ts      target selection by mode, ground/air rules

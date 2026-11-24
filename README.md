@@ -28,7 +28,7 @@ The full tower, creep, and wave tables are in [`planning/design.md`](planning/de
 | `R` | Show or hide the route |
 | `Esc` or right-click | Cancel the current selection |
 | Speed buttons | Run the game at 1x, 2x, or 3x |
-| Sound button | Mute or unmute sound effects |
+| Sound button | Mute or unmute sound effects. Each tower type has its own shot sound. Creeps make a sound when they spawn, when they are hit or killed, and when they escape |
 
 Your best wave is saved in the browser's local storage.
 
@@ -64,6 +64,7 @@ src/
     creep.ts         creep state, movement, slow and stun, repathing
     tower.ts         tower state and footprint helpers
     effects.ts       short visual effects (shots, splashes, leaks)
+    sound-events.ts  audio cues (shot, hit, kill, spawn, leak) recorded for the sound layer
   systems/
     spawner.ts       turns a wave into timed spawn events
     targeting.ts     target selection by mode, and ground/air rules
@@ -79,7 +80,7 @@ src/
   ui/
     hud.ts           sidebar: palette, stats, tower panel, log
   audio/
-    audio.ts         synthesized sound effects (WebAudio, no files)
+    audio.ts         synthesized sound effects and per-tower/creep recipes (WebAudio, no files)
 tests/               unit tests (Vitest)
 scripts/
   dev.sh, build.sh, test.sh   wrappers around npm commands

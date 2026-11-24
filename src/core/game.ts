@@ -4,6 +4,7 @@ import { TOWER_TYPES, type TargetMode } from "../data/towers";
 import { buildWave } from "../data/waves";
 import { advanceCreep, cellOf, createCreep, repathCreep, type Creep } from "../entities/creep";
 import { ringFx, tickEffects, type Effect } from "../entities/effects";
+import { MAX_SOUND_EVENTS, type SoundEvent } from "../entities/sound-events";
 import { footprintCovers, towerCovers, type Tower } from "../entities/tower";
 import { Grid, type Cell } from "../grid/grid";
 import { findRoute } from "../grid/pathfinding";
@@ -32,6 +33,8 @@ export class Game {
   towers: Tower[] = [];
   creeps: Creep[] = [];
   effects: Effect[] = [];
+  /** Audio cues since the last `drainSoundEvents()`. The UI drains them once per frame. */
+  soundEvents: SoundEvent[] = [];
   /** Most recent log lines, capped at MAX_MESSAGES. */
   messages: string[] = [];
   /** Total log lines ever written. Lets the UI find lines it has not seen yet. */
@@ -179,10 +182,20 @@ export class Game {
     return true;
   }
 
+  /** Returns the audio cues recorded since the last call and clears them. */
+  drainSoundEvents(): SoundEvent[] {
+    const out = this.soundEvents;
+    this.soundEvents = [];
+    return out;
+  }
+
   /** Advances the simulation by `dt` seconds. Callers pass fixed steps. */
   update(dt: number): void {
     if (this.paused) return;
     tickEffects(this.effects, dt);
+    if (this.soundEvents.length > MAX_SOUND_EVENTS) {
+      this.soundEvents.splice(0, this.soundEvents.length - MAX_SOUND_EVENTS);
+    }
     if (this.isOver) return;
 
     if (this.phase === "build") {
@@ -210,7 +223,7 @@ export class Game {
       if (advanceCreep(c, dt, this.waypoints)) this.leak(c);
     }
 
-    const killed = stepTowers(this.towers, this.creeps, dt, this.effects);
+    const killed = stepTowers(this.towers, this.creeps, dt, this.effects, this.soundEvents);
     for (const c of killed) this.onKill(c);
 
     this.creeps = this.creeps.filter((c) => c.status === "alive");
@@ -248,12 +261,14 @@ export class Game {
     // between them, so towers placed along the lane can hit them. Ground creeps follow the maze.
     const path = type.air ? this.waypoints : this.route;
     this.creeps.push(createCreep(this.nextId++, type, this.wave, spawn.x + 0.5, spawn.y + 0.5, path, 1, 1));
+    this.soundEvents.push({ kind: "spawn", id: type.id });
   }
 
   private leak(c: Creep): void {
     c.status = "leaked";
     this.lives -= 1;
     this.effects.push(ringFx(this.map.exit.x + 0.5, this.map.exit.y + 0.5, 0.8, "#f85149", 0.4));
+    this.soundEvents.push({ kind: "leak", id: c.type.id });
     this.note(`${c.type.name} escaped (-1 life)`);
   }
 
@@ -261,6 +276,7 @@ export class Game {
     this.gold += c.type.bounty;
     this.kills += 1;
     this.effects.push(ringFx(c.x, c.y, 0.5, c.type.color, 0.3));
+    this.soundEvents.push({ kind: "kill", id: c.type.id });
 
     if (c.type.splitInto) {
       const childType = getCreepType(c.type.splitInto.type);

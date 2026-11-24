@@ -8,6 +8,7 @@
 - [x] 6. Upgrades & UI polish: tower panel, upgrade/sell, tooltips, range preview, hotkeys, speed control
 - [x] 7. Balance & extras: `scripts/balance-sim.ts`, difficulty tuning, sound effects, best-wave score, second map
 - [x] 8. Docs & release: README, design reference, production build verified
+- [x] 9. Combat audio: a distinct sound per tower type, plus creep spawn, hit, kill, and leak cues. Cues are recorded in `src/entities/sound-events.ts` and played by `src/audio/audio.ts`. Sounds were checked by tests, not by ear.
 
 ## Known gaps
 

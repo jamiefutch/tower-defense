@@ -4,6 +4,7 @@ import { Game } from "./core/game";
 import { saveBestWave } from "./core/storage";
 import { MAPS, getMap } from "./data/maps";
 import { TOWER_ORDER, getTowerType, type TargetMode } from "./data/towers";
+import type { SoundEvent } from "./entities/sound-events";
 import type { Tower } from "./entities/tower";
 import type { Cell } from "./grid/grid";
 import { footprintOrigin, render, type ViewState } from "./render/renderer";
@@ -65,7 +66,6 @@ function sfxFor(msg: string): Sfx | null {
   if (msg.startsWith("Built")) return "build";
   if (msg.startsWith("Sold")) return "sell";
   if (msg.includes("incoming")) return "wave";
-  if (msg.includes("escaped")) return "leak";
   if (msg.startsWith("You survived")) return "win";
   if (msg.startsWith("Out of lives")) return "lose";
   return null;
@@ -82,6 +82,23 @@ function playNewLogSounds(): void {
     if (s) kinds.add(s);
   }
   for (const s of kinds) sound.play(s);
+}
+
+/**
+ * Plays the cues the game recorded since the last frame. Identical cues are merged into one
+ * sound so that a crowd of towers firing together does not stack into noise.
+ */
+function playNewSoundEvents(): void {
+  const merged = new Map<string, { ev: SoundEvent; count: number }>();
+  for (const ev of game.drainSoundEvents()) {
+    // Hits are the most frequent cue and are inaudible at high speed, so skip them there.
+    if (ev.kind === "hit" && game.speed > 1) continue;
+    const key = `${ev.kind}:${ev.id}:${ev.splash ? "splash" : ""}`;
+    const slot = merged.get(key);
+    if (slot) slot.count += 1;
+    else merged.set(key, { ev, count: 1 });
+  }
+  for (const { ev, count } of merged.values()) sound.cue(ev, count);
 }
 
 function cellFromEvent(e: MouseEvent): Cell {
@@ -304,6 +321,7 @@ function frame(now: number): void {
 
   if (game.isOver && !endShown) showEndScreen();
   playNewLogSounds();
+  playNewSoundEvents();
 
   render(ctx, game, view);
 
