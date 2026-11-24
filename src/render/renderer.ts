@@ -87,16 +87,15 @@ export function render(ctx: CanvasRenderingContext2D, game: Game, view: ViewStat
 }
 
 /**
- * The field never changes during a game, so it is drawn once per size, resolution and theme, and reused each frame.
- * One layer is kept per key so switching between maps, scales or themes doesn't leave stale fields behind.
+ * The field never changes during a game, so the current size, resolution and theme are reused each frame.
+ * Keeping only the current layer prevents successive resize scales from retaining full-resolution canvases.
  */
-const groundLayers = new Map<string, HTMLCanvasElement>();
+let groundCache: { key: string; layer: HTMLCanvasElement } | null = null;
 
 /** `res` is the backing-store pixels per CSS pixel, including the fit scale. */
 function groundLayer(width: number, height: number, res: number): HTMLCanvasElement {
   const key = `${theme.id}:${width}x${height}@${res}`;
-  const cached = groundLayers.get(key);
-  if (cached) return cached;
+  if (groundCache?.key === key) return groundCache.layer;
 
   const layer = document.createElement("canvas");
   layer.width = Math.round(px(width) * res);
@@ -116,7 +115,7 @@ function groundLayer(width: number, height: number, res: number): HTMLCanvasElem
     g.fillRect(0, 0, 2, px(height));
     g.fillRect(px(width) - 2, 0, 2, px(height));
   }
-  groundLayers.set(key, layer);
+  groundCache = { key, layer };
   return layer;
 }
 
