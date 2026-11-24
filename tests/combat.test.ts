@@ -3,7 +3,7 @@ import { CREEP_TYPES } from "../src/data/creeps";
 import { TOWER_TYPES } from "../src/data/towers";
 import { createCreep, type Creep } from "../src/entities/creep";
 import type { Effect } from "../src/entities/effects";
-import type { Tower } from "../src/entities/tower";
+import { BARREL_REACH, type Tower } from "../src/entities/tower";
 import { stepTowers } from "../src/systems/combat";
 import { pickTarget } from "../src/systems/targeting";
 
@@ -13,7 +13,7 @@ const path = [
 ];
 
 function tower(typeId: string, x = 0, y = 0, mode: Tower["mode"] = "nearest"): Tower {
-  return { id: 99, type: TOWER_TYPES[typeId], x, y, level: 0, invested: 0, cooldown: 0, shots: 0, mode };
+  return { id: 99, type: TOWER_TYPES[typeId], x, y, level: 0, invested: 0, cooldown: 0, shots: 0, mode, aim: 0 };
 }
 
 /** Creep at a given position. Uses wave 1 so HP is the base value. */
@@ -162,5 +162,41 @@ describe("effects output", () => {
     const effects: Effect[] = [];
     stepTowers([tower("dart")], [creepAt(2, 1, "normal")], 1, effects);
     expect(effects.some((e) => e.kind === "line")).toBe(true);
+  });
+});
+
+describe("aiming", () => {
+  // Tower centre is (1, 1) for a footprint at the origin.
+  it("points the weapon at the target", () => {
+    const t = tower("dart");
+    stepTowers([t], [creepAt(1, 3)], 1 / 60, []);
+    expect(t.aim).toBeCloseTo(Math.PI / 2);
+  });
+
+  it("keeps tracking the target while reloading", () => {
+    const t = tower("pellet");
+    stepTowers([t], [creepAt(1, 3, "normal", 1)], 1 / 60, []);
+    t.cooldown = 5;
+    stepTowers([t], [creepAt(3, 1, "normal", 2)], 1 / 60, []);
+    expect(t.aim).toBeCloseTo(0);
+    expect(t.shots).toBe(1);
+  });
+
+  it("holds its last aim when no target is in range", () => {
+    const t = tower("dart");
+    stepTowers([t], [creepAt(0, 1)], 1 / 60, []);
+    const aimed = t.aim;
+    stepTowers([t], [], 1 / 60, []);
+    expect(t.aim).toBe(aimed);
+  });
+
+  it("shots start at the barrel tip, not the tower centre", () => {
+    const effects: Effect[] = [];
+    const t = tower("dart");
+    stepTowers([t], [creepAt(3, 1)], 1, effects);
+    const fx = effects.find((e) => e.kind === "line");
+    expect(fx).toBeDefined();
+    expect(fx!.x1).toBeCloseTo(1 + BARREL_REACH);
+    expect(fx!.y1).toBeCloseTo(1);
   });
 });

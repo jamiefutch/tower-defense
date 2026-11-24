@@ -134,6 +134,7 @@ export class Game {
       cooldown: 0,
       shots: 0,
       mode: "nearest",
+      aim: 0,
     });
     this.note(`Built ${type.name}`);
     this.repathAll();

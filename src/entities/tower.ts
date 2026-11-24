@@ -14,7 +14,12 @@ export interface Tower {
   cooldown: number;
   shots: number;
   mode: TargetMode;
+  /** Direction the weapon points, in radians. Kept on the last target when none is in range. */
+  aim: number;
 }
+
+/** How far the weapon barrel reaches from the tower centre, in cell units. Shots start at its tip. */
+export const BARREL_REACH = 0.9;
 
 export function towerLevel(t: Tower): TowerLevel {
   return t.type.levels[t.level];
